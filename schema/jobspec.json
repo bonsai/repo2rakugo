@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["source", "outputs", "delivery"],
+  "properties": {
+    "source": {
+      "type": "object",
+      "required": ["type", "url"],
+      "properties": {
+        "type": {"const": "github"},
+        "url": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "generation": {
+      "type": "object",
+      "properties": {
+        "style": {"type": "string"},
+        "length": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "outputs": {
+      "type": "array",
+      "items": {"enum": ["json", "mp3"]},
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "delivery": {
+      "type": "object",
+      "required": ["type", "email"],
+      "properties": {
+        "type": {"const": "email"},
+        "email": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
