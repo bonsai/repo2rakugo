@@ -1,0 +1,40 @@
+name: repo2rakugo
+
+on:
+  repository_dispatch:
+    types:
+      - repo2rakugo
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate job
+        env:
+          JOB_ID: ${{ github.event.client_payload.job_id }}
+          JOB_SPEC: ${{ toJSON(github.event.client_payload.spec) }}
+        run: |
+          test -n "$JOB_ID"
+          test -n "$JOB_SPEC"
+          printf '%s' "$JOB_SPEC" > job-spec.json
+
+      - name: Prepare output
+        env:
+          JOB_ID: ${{ github.event.client_payload.job_id }}
+        run: |
+          mkdir -p output
+          printf '{"job_id":"%s","status":"completed"}\\n' "$JOB_ID" > output/result.json
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo2rakugo-${{ github.event.client_payload.job_id }}
+          path: output/
