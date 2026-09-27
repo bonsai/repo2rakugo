@@ -1,0 +1,111 @@
+openapi: 3.1.0
+info:
+  title: repo2rakugo API
+  version: 0.1.0
+  description: Asynchronous GitHub repository to rakugo job API.
+servers:
+  - url: https://api.example.com
+paths:
+  /v1/jobs:
+    post:
+      operationId: createJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobSpec'
+      responses:
+        '202':
+          description: Job accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+  /v1/jobs/{jobId}:
+    get:
+      operationId: getJob
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+components:
+  schemas:
+    JobSpec:
+      type: object
+      required:
+        - source
+        - outputs
+        - delivery
+      properties:
+        source:
+          type: object
+          required:
+            - type
+            - url
+          properties:
+            type:
+              const: github
+            url:
+              type: string
+              format: uri
+        generation:
+          type: object
+          properties:
+            style:
+              type: string
+              default: edo-cyber
+            length:
+              type: string
+              default: short
+        outputs:
+          type: array
+          items:
+            type: string
+            enum:
+              - json
+              - mp3
+        delivery:
+          type: object
+          required:
+            - type
+            - email
+          properties:
+            type:
+              const: email
+            email:
+              type: string
+              format: email
+    JobResponse:
+      type: object
+      required:
+        - job_id
+        - status
+      properties:
+        job_id:
+          type: string
+        status:
+          type: string
+          enum:
+            - queued
+            - running
+            - completed
+            - failed
+        result:
+          type: object
+          properties:
+            json_url:
+              type: string
+              format: uri
+            mp3_url:
+              type: string
+              format: uri
