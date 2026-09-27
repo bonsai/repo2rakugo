@@ -2,7 +2,6 @@ interface Env {
   GITHUB_TOKEN: string;
   GITHUB_OWNER: string;
   GITHUB_REPO: string;
-  GITHUB_WORKFLOW: string;
 }
 
 interface JobSpec {
@@ -21,12 +20,19 @@ interface JobSpec {
   };
 }
 
+const CORS_HEADERS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET,POST,OPTIONS",
+  "access-control-allow-headers": "content-type"
+};
+
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store"
+      "cache-control": "no-store",
+      ...CORS_HEADERS
     }
   });
 }
@@ -35,14 +41,16 @@ function isValidRepoUrl(value: unknown): value is string {
   if (typeof value !== "string") return false;
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && url.hostname === "github.com" && url.pathname.split("/").filter(Boolean).length === 2;
+    return url.protocol === "https:" &&
+      url.hostname === "github.com" &&
+      url.pathname.split("/").filter(Boolean).length === 2;
   } catch {
     return false;
   }
 }
 
 function isValidEmail(value: unknown): value is string {
-  return typeof value === "string" && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value);
+  return typeof value === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function createJobId(): string {
@@ -80,11 +88,14 @@ export default {
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,
-        headers: {
-          "access-control-allow-origin": "*",
-          "access-control-allow-methods": "GET,POST,OPTIONS",
-          "access-control-allow-headers": "content-type"
-        }
+        headers: CORS_HEADERS
+      });
+    }
+
+    if (request.method === "GET" && url.pathname === "/") {
+      return json({
+        service: "repo2rakugo-api",
+        status: "ok"
       });
     }
 
