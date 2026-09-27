@@ -24,38 +24,12 @@
     button.style.marginLeft = "8px";
 
     button.addEventListener("click", async () => {
-      const email = window.prompt("Email address");
-      if (!email) return;
-
-      button.disabled = true;
-
       try {
-        const result = await chrome.runtime.sendMessage({
-          type: "submit-job",
-          spec: {
-            source: {
-              type: "github",
-              url: repoUrl
-            },
-            generation: {
-              style: "edo-cyber",
-              length: "short"
-            },
-            outputs: ["json", "mp3"],
-            delivery: {
-              type: "email",
-              email
-            }
-          }
+        await chrome.runtime.sendMessage({
+          type: "open-popup",
+          repoUrl
         });
-
-        if (!result?.ok) throw new Error(result?.error || "Job submission failed");
-        window.alert("Job queued: " + result.job_id);
-      } catch (error) {
-        window.alert(error instanceof Error ? error.message : "Job submission failed");
-      } finally {
-        button.disabled = false;
-      }
+      } catch {}
     });
 
     const target = document.querySelector("main");
