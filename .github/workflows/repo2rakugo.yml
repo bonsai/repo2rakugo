@@ -14,24 +14,63 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Validate job
         env:
           JOB_ID: ${{ github.event.client_payload.job_id }}
           JOB_SPEC: ${{ toJSON(github.event.client_payload.spec) }}
         run: |
+          set -eu
           test -n "$JOB_ID"
           test -n "$JOB_SPEC"
           printf '%s' "$JOB_SPEC" > job-spec.json
 
-      - name: Prepare output
+      - name: Clone source repository
+        env:
+          SOURCE_URL: ${{ github.event.client_payload.spec.source.url }}
+        run: |
+          set -eu
+          git clone --depth 1 "$SOURCE_URL" source-repo
+
+      - name: Build source snapshot
         env:
           JOB_ID: ${{ github.event.client_payload.job_id }}
         run: |
+          set -eu
           mkdir -p output
-          printf '{"job_id":"%s","status":"completed"}\\n' "$JOB_ID" > output/result.json
+          README=""
+          if [ -f source-repo/README.md ]; then
+            README="$(head -c 12000 source-repo/README.md)"
+          fi
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          job_id = os.environ["JOB_ID"]
+          spec = json.loads(Path("job-spec.json").read_text())
+          readme = ""
+          readme_path = Path("source-repo/README.md")
+          if readme_path.exists():
+              readme = readme_path.read_text(errors="replace")[:12000]
+
+          files = []
+          for path in Path("source-repo").rglob("*"):
+              if path.is_file() and ".git" not in path.parts:
+                  files.append(str(path.relative_to("source-repo")))
+          files.sort()
+
+          result = {
+              "job_id": job_id,
+              "status": "completed",
+              "source": spec["source"],
+              "generation": spec.get("generation", {}),
+              "files": files[:500],
+              "readme": readme
+          }
+          Path("output/result.json").write_text(
+              json.dumps(result, ensure_ascii=False, indent=2)
+          )
+          PY
 
       - name: Upload result
         uses: actions/upload-artifact@v4
