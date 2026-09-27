@@ -1,19 +1,21 @@
 (() => {
   const BUTTON_ID = "repo2rakugo-button";
 
-  function isRepoPage() {
+  function getRepoParts() {
     const parts = location.pathname.split("/").filter(Boolean);
-    return parts.length >= 2 && !parts[2];
+    if (parts.length !== 2) return null;
+    if (parts[0] === "settings" || parts[0] === "orgs") return null;
+    return parts;
   }
 
   function getRepoUrl() {
-    const parts = location.pathname.split("/").filter(Boolean);
-    if (parts.length < 2) return null;
-    return "https://github.com/" + parts[0] + "/" + parts[1];
+    const parts = getRepoParts();
+    return parts ? "https://github.com/" + parts[0] + "/" + parts[1] : null;
   }
 
   function createButton() {
-    if (!isRepoPage() || document.getElementById(BUTTON_ID)) return;
+    const repoUrl = getRepoUrl();
+    if (!repoUrl || document.getElementById(BUTTON_ID)) return;
 
     const button = document.createElement("button");
     button.id = BUTTON_ID;
@@ -23,9 +25,6 @@
     button.style.marginLeft = "8px";
 
     button.addEventListener("click", async () => {
-      const repoUrl = getRepoUrl();
-      if (!repoUrl) return;
-
       const email = window.prompt("Email address");
       if (!email) return;
 
@@ -70,9 +69,7 @@
     });
 
     const target = document.querySelector("main");
-    if (target) {
-      target.prepend(button);
-    }
+    if (target) target.prepend(button);
   }
 
   createButton();
