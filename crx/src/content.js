@@ -4,7 +4,6 @@
   function getRepoParts() {
     const parts = location.pathname.split("/").filter(Boolean);
     if (parts.length !== 2) return null;
-    if (parts[0] === "settings" || parts[0] === "orgs") return null;
     return parts;
   }
 
@@ -31,16 +30,9 @@
       button.disabled = true;
 
       try {
-        const response = await chrome.storage.sync.get(["apiBaseUrl"]);
-        const apiBaseUrl = response.apiBaseUrl;
-        if (!apiBaseUrl) throw new Error("API base URL is not configured");
-
-        const result = await fetch(apiBaseUrl.replace(/\/$/, "") + "/v1/jobs", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
+        const result = await chrome.runtime.sendMessage({
+          type: "submit-job",
+          spec: {
             source: {
               type: "github",
               url: repoUrl
@@ -54,15 +46,13 @@
               type: "email",
               email
             }
-          })
+          }
         });
 
-        if (!result.ok) throw new Error("Job submission failed");
-
-        const job = await result.json();
-        window.alert("Job queued: " + job.job_id);
+        if (!result?.ok) throw new Error(result?.error || "Job submission failed");
+        window.alert("Job queued: " + result.job_id);
       } catch (error) {
-        window.alert(error.message);
+        window.alert(error instanceof Error ? error.message : "Job submission failed");
       } finally {
         button.disabled = false;
       }
@@ -73,7 +63,8 @@
   }
 
   createButton();
-
-  const observer = new MutationObserver(createButton);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  new MutationObserver(createButton).observe(document.documentElement, {
+    childList: true,
+    subtree: true
+  });
 })();
