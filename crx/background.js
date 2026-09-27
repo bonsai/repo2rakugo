@@ -1,16 +1,19 @@
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "open-popup") {
+    sendResponse({ ok: false, error: "Use the extension toolbar button to open the email form" });
+    return;
+  }
+
   if (message?.type !== "submit-job") return;
 
   (async () => {
     try {
       const { apiBaseUrl } = await chrome.storage.sync.get(["apiBaseUrl"]);
-      if (!apiBaseUrl) throw new Error("Configure the API base URL in extension options");
+      if (!apiBaseUrl) throw new Error("API base URL is not configured");
 
       const response = await fetch(apiBaseUrl.replace(/\/$/, "") + "/v1/jobs", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(message.spec)
       });
 
