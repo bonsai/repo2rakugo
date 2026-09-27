@@ -36,22 +36,13 @@ jobs:
           JOB_ID: ${{ github.event.client_payload.job_id }}
         run: |
           set -eu
-          mkdir -p output
-          README=""
-          if [ -f source-repo/README.md ]; then
-            README="$(head -c 12000 source-repo/README.md)"
-          fi
           python - <<'PY'
           import json
-          import os
           from pathlib import Path
 
-          job_id = os.environ["JOB_ID"]
           spec = json.loads(Path("job-spec.json").read_text())
-          readme = ""
           readme_path = Path("source-repo/README.md")
-          if readme_path.exists():
-              readme = readme_path.read_text(errors="replace")[:12000]
+          readme = readme_path.read_text(errors="replace")[:12000] if readme_path.exists() else ""
 
           files = []
           for path in Path("source-repo").rglob("*"):
@@ -60,12 +51,40 @@ jobs:
           files.sort()
 
           result = {
-              "job_id": job_id,
-              "status": "completed",
+              "job_id": "${{ github.event.client_payload.job_id }}",
               "source": spec["source"],
               "generation": spec.get("generation", {}),
               "files": files[:500],
               "readme": readme
+          }
+          Path("source-snapshot.json").write_text(
+              json.dumps(result, ensure_ascii=False, indent=2)
+          )
+          PY
+
+      - name: Generate rakugo JSON
+        env:
+          LLM_API_URL: ${{ secrets.LLM_API_URL }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL }}
+        run: |
+          set -eu
+          python scripts/generate_rakugo.py
+
+      - name: Build result
+        env:
+          JOB_ID: ${{ github.event.client_payload.job_id }}
+        run: |
+          set -eu
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          rakugo = json.loads(Path("output/rakugo.json").read_text())
+          result = {
+              "job_id": "${{ github.event.client_payload.job_id }}",
+              "status": "completed",
+              "rakugo": rakugo
           }
           Path("output/result.json").write_text(
               json.dumps(result, ensure_ascii=False, indent=2)
